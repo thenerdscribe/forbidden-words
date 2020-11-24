@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import re
 from dotenv import load_dotenv
 from discord.ext import commands
 from discord.utils import get
@@ -19,6 +20,8 @@ def get_key(val):
     for key, value in words.items():
         if val == value:
             return key
+    
+    return False
 
 
 def save_word(author, word):
@@ -40,7 +43,13 @@ def point_scored(user):
 @bot.command('myword', help="Claim your one word that is not allowed")
 async def register_word(ctx, word: str):
     word = str.lower(word)
-   
+    author = ctx.author.name
+
+    current_word_owner = get_key(word)
+    if current_word_owner:
+        await ctx.send(f'Sorry {current_word_owner} already owns this word.')
+        return False
+    
     with open('safe_words.txt', 'r') as safeword_file:
         safe_words = safeword_file.read().splitlines()
 
@@ -48,12 +57,12 @@ async def register_word(ctx, word: str):
         await ctx.send(f'Sorry {word} is a safe word and cannot be claimed.')
         return False
 
-    author = ctx.author.name
+    
     save_word(author, word)
     await ctx.send(f"{author}'s word is now {word}")
 
 
-@bot.command('leaderboard', help="Show current score.")
+@bot.command('leaderboard', help="Show current score")
 async def show_board(ctx):
     msg = '''
 ===================
@@ -67,10 +76,29 @@ async def show_board(ctx):
     msg = f'```{msg}```'
     await ctx.send(msg)
 
+@bot.command('list', help='Show list of banned words')
+async def show_list(ctx):
+    msg = '''
+====================
+|   Banned Words   |
+====================
+'''
+    for word in words.values():
+        msg = f'{msg}\n   -{word}'
+    
+    await ctx.send(f'```{msg}```')
 
 @bot.listen('on_message')
 async def forbidden_word_check(message):
-    split_up = message.content.lower().split(' ')
+    if message.content[0] == '!':
+        return
+    
+    split_up = []
+    for cur_word in message.content.lower().split(' '):
+        cur_word = re.sub(r'[^a-zA-Z0-9]', '', cur_word)
+        cur_word = str.lower(cur_word)
+        split_up.append(cur_word)
+    
     if message.author.name != bot.user.name:
         for word in words.values():
             if word.lower() in split_up:
