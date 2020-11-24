@@ -79,7 +79,6 @@ async def forbidden_word_check(message):
                     user = message.author
                     await message.channel.send(f"{message.author} used {word_owner}'s word.")
                     point_scored(word_owner)
-                    break
 
 
 @bot.event
